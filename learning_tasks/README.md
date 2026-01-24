@@ -58,18 +58,6 @@ curl http://localhost:8000/profile/1
 | `asyncio.gather()` | Run tasks concurrently | Multiple I/O operations |
 | `asyncio.sleep()` | Non-blocking pause | Simulates I/O (network, DB) |
 | `time.sleep()` | Blocking pause | Don't use in async! |
+ Commit to GitHub when done
 
-## How to Practice
 
-1. Run each task sequentially
-2. Modify the code and observe changes
-3. Add print statements to see execution order
-4. Time the results to see concurrency benefits
-5. Commit to GitHub when done
-
-## Next Steps
-
-After completing these tasks:
-- Move to Day 5 (auth, rate limiting, real APIs)
-- Fix your `backend/main.py` with `AsyncOpenAI`
-- Add streaming responses
