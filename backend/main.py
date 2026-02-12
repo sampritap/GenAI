@@ -1,38 +1,57 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
-from openai import OpenAI
-import os
-from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse
+from backend.schemas import ChatRequest
+import asyncio
 
-# Load environment variables from .env file
-load_dotenv()
+from dotenv import load_dotenv
+from pathlib import Path
+import os
+
+# Load .env from project root
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(env_path)
+
+# If using OpenAI SDK
+from openai import OpenAI
+print("OPENAI_API_KEY LOADED:", os.getenv("OPENAI_API_KEY") is not None)
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 app = FastAPI()
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+#prompt builder
+def build_prompt(messages):
+    """
+    Converts structured messages into a single prompt string
+    """
+    prompt = ""
+    for msg in messages:
+        prompt += f"{msg.role.upper()}: {msg.content}\n"
+    prompt += "ASSISTANT:"
+    return prompt
 
-class PromptRequest(BaseModel):
-    prompt: str
-    model: str = "gpt-3.5-turbo"
+#streaming LLM generator
+async def stream_llm_response(prompt: str):
+    """
+    Async generator that streams LLM tokens
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": prompt},
+        ],
+        stream=True,
+    )
 
-@app.get("/")
-def root():
-    return {"message": "GenAI backend running"}
+    for chunk in response:
+        if chunk.choices[0].delta.content:
+            yield chunk.choices[0].delta.content
+            await asyncio.sleep(0)  # allow event loop to breathe
 
-@app.post("/generate")
-async def generate_tex(request: PromptRequest):
-    try:
-        response = client.chat.completions.create(
-            model=request.model,
-            messages=[
-                {"role": "user", "content": request.prompt}
-            ],
-            max_tokens=500
-        )
-        return {
-            "prompt": request.prompt,
-            "response": response.choices[0].message.content
-        }
-    except Exception as e:
-        return {"error": str(e)}
+
+#streaming endpoint
+@app.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    prompt = build_prompt(request.messages)
+    return StreamingResponse(stream_llm_response(prompt), media_type="text/plain")
