@@ -138,7 +138,7 @@ async def get_current_user(credentials: HTTPAuthCredentials = Depends(security))
     if token in token_blacklist:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has been revoked",
+            detail="Token has been revoked", 
         )
     
     try:

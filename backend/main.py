@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from backend.schemas import ChatRequest
 import asyncio
-
 from dotenv import load_dotenv
 from pathlib import Path
 import os
+from learning_tasks.tool_calling.agent import run_agent
 
 # Load .env from project root
 env_path = Path(__file__).resolve().parent.parent / ".env"
@@ -55,3 +56,14 @@ async def stream_llm_response(prompt: str):
 async def chat_stream(request: ChatRequest):
     prompt = build_prompt(request.messages)
     return StreamingResponse(stream_llm_response(prompt), media_type="text/plain")
+
+
+#This is for learning the tool calling agent
+class AgentRequest(BaseModel):
+    query: str
+
+#tool calling agent endpoint
+@app.post("/agent")
+def agent_endpoint(request: AgentRequest):
+    response = run_agent(request.query)
+    return {"response": response}
